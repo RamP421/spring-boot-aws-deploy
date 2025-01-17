@@ -7,35 +7,39 @@ phases:
       docker: 19
     commands:
       - echo "Installing dependencies..."
-      - mvn install -DskipTests  # This builds the JAR
+      - mvn install -DskipTests
 
   pre_build:
     commands:
       - echo "Logging in to Amazon ECR..."
-      - aws --version
       - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 577638368141.dkr.ecr.eu-north-1.amazonaws.com
       - REPOSITORY_URI=577638368141.dkr.ecr.eu-north-1.amazonaws.com/spring-boot-ecr
       - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
 
   build:
     commands:
+      - echo "Build started on $(date)"
+      - echo "Building the JAR file..."
+      - mvn clean install
       - echo "Building Docker image..."
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
-      - echo "Pushing Docker images to ECR..."
+      - echo "Post-build phase started"
+      - echo "Checking Docker images..."
+      - docker images
+      - echo "Tagging Docker image..."
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo "Pushing Docker image to ECR..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo "Writing image definitions file..."
-      - DOCKER_CONTAINER_NAME=spring-boot-ecr-container
-      - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
-      - echo $DOCKER_CONTAINER_NAME
-      - echo "Printing imagedefinitions.json..."
-      - cat imagedefinitions.json
+      - echo "Post-build phase completed"
+      - echo "Image pushed to ECR."
 
 artifacts:
   files:
     - imagedefinitions.json
     - target/spring-boot-aws-deploy.jar
+
