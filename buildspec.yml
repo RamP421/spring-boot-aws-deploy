@@ -7,30 +7,25 @@ phases:
       docker: 19
     commands:
       - echo "Installing dependencies..."
-      - mvn install -DskipTests
+      - mvn install -DskipTests  # This builds the JAR
 
   pre_build:
     commands:
       - echo "Logging in to Amazon ECR..."
       - aws --version
-      #- $(aws ecr get-login --region eu-north-1 --no-include-email)
       - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 577638368141.dkr.ecr.eu-north-1.amazonaws.com
       - REPOSITORY_URI=577638368141.dkr.ecr.eu-north-1.amazonaws.com/spring-boot-ecr
       - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
 
   build:
     commands:
-      - echo "Build started on $(date)"
-      - echo "Building the JAR file..."
-      - mvn clean install
       - echo "Building Docker image..."
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
 
   post_build:
     commands:
-      - echo "Build completed on $(date)"
-      - echo "Pushing to repository..."
+      - echo "Pushing Docker images to ECR..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo "Writing image definitions file..."
