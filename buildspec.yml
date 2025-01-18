@@ -27,16 +27,16 @@ phases:
 
   post_build:
     commands:
-      - echo "Post-build phase started"
-      - echo "Checking Docker images..."
-      - docker images
-      - echo "Tagging Docker image..."
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-      - echo "Pushing Docker image to ECR..."
-      - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo "Post-build phase completed"
-      - echo "Image pushed to ECR."
+            - echo "Pushing Docker images to ECR..."
+            - docker push $REPOSITORY_URI:latest
+            - docker push $REPOSITORY_URI:$IMAGE_TAG
+            - echo "Writing image definitions file..."
+            - export DOCKER_CONTAINER_NAME=spring-boot-cluster
+            - printf '[{"name":"%s","imageUri":"%s"}]' $DOCKER_CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+            - echo "Printing imagedefinitions.json..."
+            - cat imagedefinitions.json
+            - echo "Image pushed to ECR and post-build phase completed."
+
 
 artifacts:
   files:
